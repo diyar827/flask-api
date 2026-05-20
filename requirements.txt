@@ -1,2 +1,6 @@
 Flask==3.1.3
+flask-restx
+flask-sqlalchemy
+psycopg2-binary
+python-dotenv
 gunicorn==23.0.0
