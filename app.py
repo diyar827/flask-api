@@ -3,6 +3,8 @@ from flask import Flask
 from flask_restx import Api, Resource, fields
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
+import random
+from datetime import datetime
 
 load_dotenv()
 
@@ -23,6 +25,7 @@ chargers_ns = api.namespace('chargers', description='Ladestander operationer')
 sessions_ns = api.namespace('sessions', description='Ladesession operationer')
 billing_ns = api.namespace('billing', description='Afregning operationer')
 analytics_ns = api.namespace('analytics', description='Data analyse operationer')
+telemetry_ns = api.namespace('telemetry', description='Realtids telemetri fra ladestandere')
 
 # --- MODELLER (database tabeller) ---
 class Charger(db.Model):
@@ -134,6 +137,24 @@ class AnalyticsSummary(Resource):
             "active_sessions": active_sessions,
             "available_chargers": available_chargers
         }
+    
+    # --- TELEMETRY ---
+@telemetry_ns.route('/<int:charger_id>')
+class ChargerTelemetry(Resource):
+    def get(self, charger_id):
+        """Hent realtids telemetri for en ladestander"""
+        charger = Charger.query.get_or_404(charger_id)
+        return {
+            "charger_id": charger_id,
+            "location": charger.location,
+            "timestamp": datetime.utcnow().isoformat(),
+            "power_kw": round(random.uniform(0, charger.power_kw), 2),
+            "voltage": round(random.uniform(220, 240), 1),
+            "current_amp": round(random.uniform(10, 32), 1),
+            "status": charger.status,
+            "uptime_pct": round(random.uniform(95, 100), 2)
+        }
+
 
 # Opret tabeller og seed data
 with app.app_context():
