@@ -22,6 +22,7 @@ api = Api(app,
 chargers_ns = api.namespace('chargers', description='Ladestander operationer')
 sessions_ns = api.namespace('sessions', description='Ladesession operationer')
 billing_ns = api.namespace('billing', description='Afregning operationer')
+analytics_ns = api.namespace('analytics', description='Data analyse operationer')
 
 # --- MODELLER (database tabeller) ---
 class Charger(db.Model):
@@ -114,6 +115,25 @@ class BillingList(Resource):
         db.session.add(invoice)
         db.session.commit()
         return {"message": "Faktura oprettet", "id": invoice.id}, 201
+    
+    # --- ANALYTICS ---
+@analytics_ns.route('/summary')
+class AnalyticsSummary(Resource):
+    def get(self):
+        """Hent analytics oversigt over ladesessioner"""
+        total_sessions = Session.query.count()
+        total_energy = db.session.query(db.func.sum(Session.energy_kwh)).scalar() or 0
+        avg_energy = db.session.query(db.func.avg(Session.energy_kwh)).scalar() or 0
+        active_sessions = Session.query.filter_by(status='active').count()
+        available_chargers = Charger.query.filter_by(status='available').count()
+
+        return {
+            "total_sessions": total_sessions,
+            "total_energy_kwh": round(float(total_energy), 2),
+            "avg_energy_per_session_kwh": round(float(avg_energy), 2),
+            "active_sessions": active_sessions,
+            "available_chargers": available_chargers
+        }
 
 # Opret tabeller og seed data
 with app.app_context():
