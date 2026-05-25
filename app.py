@@ -1,10 +1,12 @@
 import os
-from flask import Flask
+import csv
+import io
+import random
+from datetime import datetime
+from flask import Flask, make_response
 from flask_restx import Api, Resource, fields
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
-import random
-from datetime import datetime
 
 load_dotenv()
 
@@ -155,6 +157,66 @@ class ChargerTelemetry(Resource):
             "uptime_pct": round(random.uniform(95, 100), 2)
         }
 
+# --- CSV EXPORT ---
+@analytics_ns.route('/export/chargers')
+class ExportChargers(Resource):
+    def get(self):
+        """Eksporter ladestandere som CSV"""
+        chargers = Charger.query.all()
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['id', 'location', 'status', 'power_kw'])
+        for c in chargers:
+            writer.writerow([c.id, c.location, c.status, c.power_kw])
+        response = make_response(output.getvalue())
+        response.headers['Content-Type'] = 'text/csv'
+        response.headers['Content-Disposition'] = 'attachment; filename=chargers.csv'
+        return response
+
+@analytics_ns.route('/export/sessions')
+class ExportSessions(Resource):
+    def get(self):
+        """Eksporter sessioner som CSV"""
+        sessions = Session.query.all()
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['id', 'charger_id', 'user_id', 'energy_kwh', 'status'])
+        for s in sessions:
+            writer.writerow([s.id, s.charger_id, s.user_id, s.energy_kwh, s.status])
+        response = make_response(output.getvalue())
+        response.headers['Content-Type'] = 'text/csv'
+        response.headers['Content-Disposition'] = 'attachment; filename=sessions.csv'
+        return response
+
+@analytics_ns.route('/export/billing')
+class ExportBilling(Resource):
+    def get(self):
+        """Eksporter billing som CSV"""
+        invoices = Invoice.query.all()
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['id', 'session_id', 'amount', 'currency', 'status'])
+        for i in invoices:
+            writer.writerow([i.id, i.session_id, i.amount, i.currency, i.status])
+        response = make_response(output.getvalue())
+        response.headers['Content-Type'] = 'text/csv'
+        response.headers['Content-Disposition'] = 'attachment; filename=billing.csv'
+        return response
+
+@analytics_ns.route('/export/telemetry')
+class ExportTelemetry(Resource):
+    def get(self):
+        """Eksporter telemetri som CSV"""
+        chargers = Charger.query.all()
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['charger_id', 'location', 'timestamp', 'power_kw', 'voltage', 'current_amp', 'status', 'uptime_pct'])
+        for c in chargers:
+            writer.writerow([c.id, c.location, datetime.utcnow().isoformat(), round(random.uniform(0, c.power_kw), 2), round(random.uniform(220, 240), 1), round(random.uniform(10, 32), 1), c.status, round(random.uniform(95, 100), 2)])
+        response = make_response(output.getvalue())
+        response.headers['Content-Type'] = 'text/csv'
+        response.headers['Content-Disposition'] = 'attachment; filename=telemetry.csv'
+        return response
 
 # Opret tabeller og seed data
 with app.app_context():
