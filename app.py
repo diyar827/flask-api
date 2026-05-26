@@ -7,6 +7,9 @@ from flask import Flask, make_response
 from flask_restx import Api, Resource, fields
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
+from sklearn.linear_model import LinearRegression
+from sklearn.tree import DecisionTreeRegressor
+import numpy as np
 
 load_dotenv()
 app = Flask(__name__)
@@ -28,6 +31,7 @@ billing_ns = api.namespace('billing', description='Afregning operationer')
 analytics_ns = api.namespace('analytics', description='Data analyse operationer')
 telemetry_ns = api.namespace('telemetry', description='Realtids telemetri fra ladestandere')
 maintenance_ns = api.namespace('maintenance', description='Predictive Maintenance og anomaly detection')
+ml_ns = api.namespace('ml', description='Machine Learning domain service')
 
 # --- MODELLER (database tabeller) ---
 class Charger(db.Model):
@@ -263,6 +267,70 @@ class ExportTelemetry(Resource):
         response.headers['Content-Type'] = 'text/csv'
         response.headers['Content-Disposition'] = 'attachment; filename=telemetry.csv'
         return response
+    
+    # --- MACHINE LEARNING DOMAIN SERVICE ---
+@ml_ns.route('/predict/energy')
+class PredictEnergy(Resource):
+    def get(self):
+        """Forudsig energiforbrug per ladesession baseret på historiske data"""
+        sessions = Session.query.all()
+        
+        if len(sessions) < 3:
+            return {"error": "Ikke nok data til at træne modellen - opret flere sessioner"}, 400
+
+        # Byg dataset
+        X = [[s.charger_id, len(s.status)] for s in sessions]
+        y = [s.energy_kwh for s in sessions]
+
+        X = np.array(X)
+        y = np.array(y)
+
+        # Train/test split (80/20)
+        split = max(1, int(len(X) * 0.8))
+        X_train, X_test = X[:split], X[split:]
+        y_train, y_test = y[:split], y[split:]
+
+        # Linear Regression
+        lr = LinearRegression()
+        lr.fit(X_train, y_train)
+
+        # Decision Tree
+        dt = DecisionTreeRegressor(max_depth=4, random_state=42)
+        dt.fit(X_train, y_train)
+
+        # Evaluer modeller
+        if len(X_test) > 0:
+            lr_pred = lr.predict(X_test)
+            dt_pred = dt.predict(X_test)
+            lr_mae = round(float(np.mean(np.abs(lr_pred - y_test))), 2)
+            dt_mae = round(float(np.mean(np.abs(dt_pred - y_test))), 2)
+        else:
+            lr_mae = None
+            dt_mae = None
+
+        # Forudsig næste session
+        next_session = np.array([[1, 9]])
+        lr_next = round(float(lr.predict(next_session)[0]), 2)
+        dt_next = round(float(dt.predict(next_session)[0]), 2)
+
+        return {
+            "model_info": {
+                "training_samples": split,
+                "test_samples": len(X_test),
+                "features": ["charger_id", "status_length"]
+            },
+            "linear_regression": {
+                "mae": lr_mae,
+                "predicted_next_kwh": lr_next
+            },
+            "decision_tree": {
+                "mae": dt_mae,
+                "predicted_next_kwh": dt_next
+            },
+            "recommendation": "Decision Tree" if (dt_mae or 0) < (lr_mae or 0) else "Linear Regression",
+            "avg_energy_kwh": round(float(np.mean(y)), 2),
+            "total_sessions_analysed": len(sessions)
+        }
 
 # Opret tabeller og seed data
 with app.app_context():
