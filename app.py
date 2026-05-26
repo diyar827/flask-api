@@ -9,7 +9,6 @@ from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 
 load_dotenv()
-
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -28,6 +27,7 @@ sessions_ns = api.namespace('sessions', description='Ladesession operationer')
 billing_ns = api.namespace('billing', description='Afregning operationer')
 analytics_ns = api.namespace('analytics', description='Data analyse operationer')
 telemetry_ns = api.namespace('telemetry', description='Realtids telemetri fra ladestandere')
+maintenance_ns = api.namespace('maintenance', description='Predictive Maintenance og anomaly detection')
 
 # --- MODELLER (database tabeller) ---
 class Charger(db.Model):
@@ -155,6 +155,52 @@ class ChargerTelemetry(Resource):
             "current_amp": round(random.uniform(10, 32), 1),
             "status": charger.status,
             "uptime_pct": round(random.uniform(95, 100), 2)
+        }
+    
+    # --- PREDICTIVE MAINTENANCE / ANOMALY DETECTION ---
+@maintenance_ns.route('/anomaly/<int:charger_id>')
+class AnomalyDetection(Resource):
+    def get(self, charger_id):
+        """Detektér anomalier for en ladestander - Predictive Maintenance domain service"""
+        charger = Charger.query.get_or_404(charger_id)
+        
+        # Simulér telemetridata
+        power_kw = round(random.uniform(0, charger.power_kw), 2)
+        voltage = round(random.uniform(210, 250), 1)
+        uptime_pct = round(random.uniform(90, 100), 2)
+        
+        # Anomaly detection regler
+        anomalies = []
+        severity = "none"
+        
+        if charger.status == "occupied" and power_kw < 1.0:
+            anomalies.append("Ladestander er occupied men leverer ingen strøm")
+            severity = "critical"
+        
+        if voltage < 215 or voltage > 245:
+            anomalies.append(f"Voltage udenfor normalt interval: {voltage}V")
+            severity = "warning" if severity != "critical" else "critical"
+        
+        if uptime_pct < 95:
+            anomalies.append(f"Lav uptime registreret: {uptime_pct}%")
+            severity = "warning" if severity != "critical" else "critical"
+        
+        health_score = round(100 - (len(anomalies) * 20), 2)
+        
+        return {
+            "charger_id": charger_id,
+            "location": charger.location,
+            "status": charger.status,
+            "timestamp": datetime.utcnow().isoformat(),
+            "telemetry": {
+                "power_kw": power_kw,
+                "voltage": voltage,
+                "uptime_pct": uptime_pct
+            },
+            "anomalies": anomalies,
+            "severity": severity,
+            "health_score": health_score,
+            "recommendation": "Planlæg vedligeholdelse" if severity == "critical" else "Overvåg ladestander" if severity == "warning" else "Ingen handling nødvendig"
         }
 
 # --- CSV EXPORT ---
