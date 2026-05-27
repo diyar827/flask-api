@@ -96,6 +96,15 @@ class ChargerList(Resource):
         db.session.add(charger)
         db.session.commit()
         return {"message": "Ladestander oprettet", "id": charger.id}, 201
+    
+@chargers_ns.route('/<int:charger_id>')
+class ChargerItem(Resource):
+    def delete(self, charger_id):
+        """Slet en ladestander"""
+        charger = Charger.query.get_or_404(charger_id)
+        db.session.delete(charger)
+        db.session.commit()
+        return {"message": f"Ladestander {charger_id} slettet"}, 200
 
 # --- SESSIONS ---
 session_model = api.model('Session', {
