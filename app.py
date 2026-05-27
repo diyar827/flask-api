@@ -394,4 +394,4 @@ with app.app_context():
         db.session.commit()
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000, debug=False)
+    app.run(host="0.0.0.0", port=5001, debug=False)
