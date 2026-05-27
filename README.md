@@ -1,18 +1,26 @@
 # VoltEdge API – Smart EV Charging Infrastructure
 
 ## Overblik
-VoltEdge API er en cloud-baseret REST API løsning til håndtering af ladeinfrastruktur for elbiler. Løsningen er bygget med Flask og implementerer Domain-Driven Design principper med fokus på Predictive Maintenance og datadrevne services.
+VoltEdge API er en cloud-baseret REST API løsning til håndtering af ladeinfrastruktur for elbiler. Løsningen er bygget med Flask og implementerer Domain-Driven Design principper med fokus på Predictive Maintenance, Machine Learning og datadrevne services.
 
 ## Tech Stack
 | Teknologi | Formål |
 |-----------|--------|
 | Python / Flask | API framework |
 | Flask-RESTX / Swagger | API dokumentation |
-| PostgreSQL | Database |
+| PostgreSQL (Render) | Database |
 | SQLAlchemy | ORM |
 | Docker | Containerisering |
 | GitHub Actions | CI/CD pipeline |
 | Render | Cloud hosting |
+| Power BI | Business Intelligence dashboard |
+| scikit-learn | Machine Learning |
+
+## Live URL
+https://flask-api-c5qd.onrender.com
+
+## Swagger UI
+API dokumentation og test: https://flask-api-c5qd.onrender.com
 
 ## API Endpoints
 
@@ -41,18 +49,23 @@ VoltEdge API er en cloud-baseret REST API løsning til håndtering af ladeinfras
 ### Maintenance (Predictive Maintenance)
 - `GET /maintenance/anomaly/{charger_id}` – Detektér anomalier og health score
 
+### Machine Learning
+- `GET /ml/predict/energy` – Forudsig energiforbrug baseret på historiske sessioner (Linear Regression + Decision Tree)
+
 ## Domain-Driven Design
 Løsningen er struktureret omkring følgende bounded contexts:
 - **Charging & Session Management** – håndtering af ladesessioner
 - **Billing & Settlement** – afregning og fakturering
 - **Data & Analytics** – datadrevne services og analyse
 - **Predictive Maintenance** – anomaly detection og vedligeholdelse
+- **Machine Learning** – energiforudsigelse baseret på historiske data
 
 ## Kom i gang lokalt
 
 ### Forudsætninger
 - Python 3.11
 - PostgreSQL database
+- Docker (valgfrit)
 
 ### Installation
 ```bash
@@ -64,7 +77,7 @@ pip install -r requirements.txt
 ```
 
 ### Konfiguration
-Opret en `.env` fil:
+nævnt i .env fil: 
 
 ### Start API
 ```bash
@@ -79,17 +92,23 @@ pytest test_app.py -v
 ### Docker
 ```bash
 docker build -t voltedge-api .
-docker run -p 5001:10000 -e DATABASE_URL=postgresql://voltedge_db_su9j_user:slk7DQZxvZ21SDzEQVODg3C8sgc4QfHa@dpg-d872l9ojo89c73b5t4dg-a.oregon-postgres.render.com/voltedge_db_su9j voltedge-api
+docker run -p 5001:10000 -e DATABASE_URL=din_url voltedge-api
 ```
 
 ## CI/CD
 Projektet bruger GitHub Actions til automatisk test og deployment:
-- Ved hvert push til `main` køres alle unit tests
+- Ved hvert push til `main` køres alle 7 unit tests automatisk
 - Render deployer automatisk ved godkendt build
+- Tests dækker: chargers, sessions, billing, analytics, anomaly detection
 
-## Live URL
-https://flask-api-c5qd.onrender.com
+## Business Intelligence
+Power BI dashboard forbinder direkte til PostgreSQL databasen og visualiserer:
+- Energiforbrug per ladestander
+- Sessions status fordeling
+- Ladestandere og status
+- Total energi KPI
 
-## Swagger UI
-API dokumentation er tilgængelig på:
-https://flask-api-c5qd.onrender.com
+## Arkitektur
+GitHub → GitHub Actions (CI/CD) → Render (Flask API) → PostgreSQL (Database)
+↓
+Power BI Dashboard
