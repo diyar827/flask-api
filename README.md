@@ -14,7 +14,7 @@ VoltEdge API er en cloud-baseret REST API løsning til håndtering af ladeinfras
 | GitHub Actions | CI/CD pipeline |
 | Render | Cloud hosting |
 | Power BI | Business Intelligence dashboard |
-| scikit-learn | Machine Learning |
+| scikit-learn | Machine Learning (Linear Regression + Decision Tree) |
 
 ## Live URL
 https://flask-api-c5qd.onrender.com
@@ -27,6 +27,7 @@ API dokumentation og test: https://flask-api-c5qd.onrender.com
 ### Chargers
 - `GET /chargers/` – Hent alle ladestandere
 - `POST /chargers/` – Opret ny ladestander
+- `DELETE /chargers/{id}` – Slet en ladestander
 
 ### Sessions
 - `GET /sessions/` – Hent alle ladesessioner
@@ -35,6 +36,7 @@ API dokumentation og test: https://flask-api-c5qd.onrender.com
 ### Billing
 - `GET /billing/` – Hent afregningsdata
 - `POST /billing/` – Opret ny faktura
+- `DELETE /billing/{id}` – Slet en faktura
 
 ### Analytics
 - `GET /analytics/summary` – Hent analytics oversigt
@@ -42,6 +44,7 @@ API dokumentation og test: https://flask-api-c5qd.onrender.com
 - `GET /analytics/export/sessions` – Eksporter sessioner som CSV
 - `GET /analytics/export/billing` – Eksporter billing som CSV
 - `GET /analytics/export/telemetry` – Eksporter telemetri som CSV
+- `GET /analytics/performance` – Hent performance statistik
 
 ### Telemetry
 - `GET /telemetry/{charger_id}` – Hent realtids telemetri for en ladestander
@@ -102,11 +105,7 @@ Projektet bruger GitHub Actions til automatisk test og deployment:
 - Tests dækker: chargers, sessions, billing, analytics, anomaly detection
 
 ## Business Intelligence
-Power BI dashboard forbinder direkte til PostgreSQL databasen og visualiserer:
-- Energiforbrug per ladestander
-- Sessions status fordeling
-- Ladestandere og status
-- Total energi KPI
+Power BI dashboard forbinder direkte til PostgreSQL databasen og visualiserer en række grafer der vil gøre det intuitivt at følge med i performance.
 
 ## Arkitektur
 GitHub → GitHub Actions (CI/CD) → Render (Flask API) → PostgreSQL (Database)
