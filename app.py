@@ -154,6 +154,15 @@ class BillingList(Resource):
         db.session.commit()
         return {"message": "Faktura oprettet", "id": invoice.id}, 201
     
+@billing_ns.route('/<int:invoice_id>')
+class InvoiceItem(Resource):
+    def delete(self, invoice_id):
+        """Slet en faktura"""
+        invoice = Invoice.query.get_or_404(invoice_id)
+        db.session.delete(invoice)
+        db.session.commit()
+        return {"message": f"Faktura {invoice_id} slettet"}, 200
+    
     # --- ANALYTICS ---
 @analytics_ns.route('/summary')
 class AnalyticsSummary(Resource):
