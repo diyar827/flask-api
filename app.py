@@ -54,6 +54,26 @@ class Invoice(db.Model):
     currency = db.Column(db.String(10))
     status = db.Column(db.String(50))
 
+class TelemetryLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    charger_id = db.Column(db.Integer, db.ForeignKey('charger.id'))
+    timestamp = db.Column(db.String(50))
+    power_kw = db.Column(db.Float)
+    voltage = db.Column(db.Float)
+    current_amp = db.Column(db.Float)
+    status = db.Column(db.String(50))
+    uptime_pct = db.Column(db.Float)
+
+class AnomalyLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    charger_id = db.Column(db.Integer, db.ForeignKey('charger.id'))
+    timestamp = db.Column(db.String(50))
+    severity = db.Column(db.String(50))
+    health_score = db.Column(db.Float)
+    anomaly_count = db.Column(db.Integer)
+    recommendation = db.Column(db.String(200))
+    predicted_energy_kwh = db.Column(db.Float)
+
 # --- CHARGERS ---
 charger_model = api.model('Charger', {
     'location': fields.String(required=True, description='Placering'),
@@ -144,58 +164,89 @@ class AnalyticsSummary(Resource):
             "available_chargers": available_chargers
         }
     
-    # --- TELEMETRY ---
+ # --- TELEMETRY ---
 @telemetry_ns.route('/<int:charger_id>')
 class ChargerTelemetry(Resource):
     def get(self, charger_id):
         """Hent realtids telemetri for en ladestander"""
         charger = Charger.query.get_or_404(charger_id)
+        power_kw = round(random.uniform(0, charger.power_kw), 2)
+        voltage = round(random.uniform(220, 240), 1)
+        current_amp = round(random.uniform(10, 32), 1)
+        uptime_pct = round(random.uniform(95, 100), 2)
+        timestamp = datetime.utcnow().isoformat()
+
+        # Gem i database
+        log = TelemetryLog(
+            charger_id=charger_id,
+            timestamp=timestamp,
+            power_kw=power_kw,
+            voltage=voltage,
+            current_amp=current_amp,
+            status=charger.status,
+            uptime_pct=uptime_pct
+        )
+        db.session.add(log)
+        db.session.commit()
+
         return {
             "charger_id": charger_id,
             "location": charger.location,
-            "timestamp": datetime.utcnow().isoformat(),
-            "power_kw": round(random.uniform(0, charger.power_kw), 2),
-            "voltage": round(random.uniform(220, 240), 1),
-            "current_amp": round(random.uniform(10, 32), 1),
+            "timestamp": timestamp,
+            "power_kw": power_kw,
+            "voltage": voltage,
+            "current_amp": current_amp,
             "status": charger.status,
-            "uptime_pct": round(random.uniform(95, 100), 2)
+            "uptime_pct": uptime_pct
         }
     
-    # --- PREDICTIVE MAINTENANCE / ANOMALY DETECTION ---
+   # --- PREDICTIVE MAINTENANCE / ANOMALY DETECTION ---
 @maintenance_ns.route('/anomaly/<int:charger_id>')
 class AnomalyDetection(Resource):
     def get(self, charger_id):
         """Detektér anomalier for en ladestander - Predictive Maintenance domain service"""
         charger = Charger.query.get_or_404(charger_id)
-        
-        # Simulér telemetridata
         power_kw = round(random.uniform(0, charger.power_kw), 2)
         voltage = round(random.uniform(210, 250), 1)
         uptime_pct = round(random.uniform(90, 100), 2)
-        
-        # Anomaly detection regler
+        timestamp = datetime.utcnow().isoformat()
+
         anomalies = []
         severity = "none"
-        
+
         if charger.status == "occupied" and power_kw < 1.0:
             anomalies.append("Ladestander er occupied men leverer ingen strøm")
             severity = "critical"
-        
+
         if voltage < 215 or voltage > 245:
             anomalies.append(f"Voltage udenfor normalt interval: {voltage}V")
             severity = "warning" if severity != "critical" else "critical"
-        
+
         if uptime_pct < 95:
             anomalies.append(f"Lav uptime registreret: {uptime_pct}%")
             severity = "warning" if severity != "critical" else "critical"
-        
+
         health_score = round(100 - (len(anomalies) * 20), 2)
-        
+        recommendation = "Planlæg vedligeholdelse" if severity == "critical" else "Overvåg ladestander" if severity == "warning" else "Ingen handling nødvendig"
+
+        # Gem i database
+        log = AnomalyLog(
+            charger_id=charger_id,
+            timestamp=timestamp,
+            severity=severity,
+            health_score=health_score,
+            anomaly_count=len(anomalies),
+            recommendation=recommendation,
+            predicted_energy_kwh=None
+        )
+        db.session.add(log)
+        db.session.commit()
+
         return {
             "charger_id": charger_id,
             "location": charger.location,
             "status": charger.status,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": timestamp,
             "telemetry": {
                 "power_kw": power_kw,
                 "voltage": voltage,
@@ -204,7 +255,7 @@ class AnomalyDetection(Resource):
             "anomalies": anomalies,
             "severity": severity,
             "health_score": health_score,
-            "recommendation": "Planlæg vedligeholdelse" if severity == "critical" else "Overvåg ladestander" if severity == "warning" else "Ingen handling nødvendig"
+            "recommendation": recommendation
         }
 
 # --- CSV EXPORT ---
