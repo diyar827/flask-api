@@ -15,9 +15,12 @@ VoltEdge API er en cloud-baseret REST API løsning til håndtering af ladeinfras
 | Render | Cloud hosting |
 | Power BI | Business Intelligence dashboard |
 | scikit-learn | Machine Learning (Linear Regression + Decision Tree) |
+| Azure Container Apps | Cloud hosting af Docker container |
 
 ## Live URL
 https://flask-api-c5qd.onrender.com
+**Azure Container Apps:**
+https://voltedge-api.ashyisland-2277846f.switzerlandnorth.azurecontainerapps.io
 
 ## Swagger UI
 API dokumentation og test: https://flask-api-c5qd.onrender.com
